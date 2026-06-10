@@ -1,6 +1,11 @@
 import argparse
 
-from alert_state import clear_alert_state, record_alert_sent, should_send_alert
+from alert_state import (
+    clear_alert_state,
+    record_alert_sent,
+    should_send_customer_alert,
+    should_send_support_alert,
+)
 from config_loader import load_config
 from email_sender import send_email
 from instance_lock import InstanceAlreadyRunningError, single_instance_lock
@@ -103,34 +108,46 @@ def main():
         print(customer_body)
         return
 
-    should_send, signature = should_send_alert(
+    should_send_support, support_signature = should_send_support_alert(
         site_name,
         result,
         alert_cooldown_hours,
     )
+    should_send_customer, customer_signature = should_send_customer_alert(
+        site_name,
+        result,
+    )
 
-    if not should_send:
+    if not should_send_support and not should_send_customer:
         print(
-            f"Alert suppressed for {site_name}. "
-            f"The same issue was already sent within the last {alert_cooldown_hours} hour(s)."
+            f"Alerts suppressed for {site_name}. "
+            f"Support is still within the {alert_cooldown_hours}-hour cooldown and customer was already notified for this unresolved issue."
         )
         return
 
-    send_email(
-        config["email"]["support_recipients"],
-        f"[ALERT] PayWave Missing Data - {site_name}",
-        support_body,
-    )
+    if should_send_support:
+        send_email(
+            config["email"]["support_recipients"],
+            f"[ALERT] PayWave Missing Data - {site_name}",
+            support_body,
+        )
+        record_alert_sent(site_name, "support", support_signature)
 
-    send_email(
-        config["email"]["customer_recipients"],
-        f"PayWave Synchronization Delay - {site_name}",
-        customer_body,
-    )
+    if should_send_customer:
+        send_email(
+            config["email"]["customer_recipients"],
+            f"PayWave Synchronization Delay - {site_name}",
+            customer_body,
+        )
+        record_alert_sent(site_name, "customer", customer_signature)
 
-    record_alert_sent(site_name, signature)
+    sent_channels = []
+    if should_send_support:
+        sent_channels.append("support")
+    if should_send_customer:
+        sent_channels.append("customer")
 
-    print(f"Alert sent for {site_name}")
+    print(f"Alert sent for {site_name}: {', '.join(sent_channels)}")
 
 if __name__ == "__main__":
     try:
