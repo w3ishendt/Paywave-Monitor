@@ -44,18 +44,23 @@ def build_alert_signature(result):
     )
 
 
-def should_send_alert(site_name, result, cooldown_hours):
+def _get_site_channel_state(state, site_name, channel):
+    site_state = state.get(site_name, {})
+    return site_state.get(channel)
+
+
+def should_send_support_alert(site_name, result, cooldown_hours):
     state = _load_state()
-    site_state = state.get(site_name)
+    channel_state = _get_site_channel_state(state, site_name, "support")
     signature = build_alert_signature(result)
 
-    if not site_state:
+    if not channel_state:
         return True, signature
 
-    if site_state.get("signature") != signature:
+    if channel_state.get("signature") != signature:
         return True, signature
 
-    last_sent_at_raw = site_state.get("last_sent_at")
+    last_sent_at_raw = channel_state.get("last_sent_at")
     if not last_sent_at_raw:
         return True, signature
 
@@ -65,9 +70,24 @@ def should_send_alert(site_name, result, cooldown_hours):
     return datetime.now() >= cooldown_until, signature
 
 
-def record_alert_sent(site_name, signature):
+def should_send_customer_alert(site_name, result):
     state = _load_state()
-    state[site_name] = {
+    channel_state = _get_site_channel_state(state, site_name, "customer")
+    signature = build_alert_signature(result)
+
+    if not channel_state:
+        return True, signature
+
+    if channel_state.get("signature") != signature:
+        return True, signature
+
+    return False, signature
+
+
+def record_alert_sent(site_name, channel, signature):
+    state = _load_state()
+    site_state = state.setdefault(site_name, {})
+    site_state[channel] = {
         "signature": signature,
         "last_sent_at": datetime.now().isoformat(timespec="seconds"),
     }
