@@ -105,3 +105,8 @@ This gives internal support a practical way to identify affected sites early, re
    ```bash
    python main.py
    ```
+
+# Output
+<p align="center">
+<img src="./static/images/email-notification.png" alt="UI Layout" height="300"/>
+</p>
