@@ -1,0 +1,6 @@
+{
+  "executable_path": "..\\icps-ftp.exe",
+  "working_directory": "..",
+  "from_date_mode": "start_of_month",
+  "log_path": ".\\logs\\icps-startup-runner.log"
+}
