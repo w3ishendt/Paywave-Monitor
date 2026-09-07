@@ -84,12 +84,44 @@ def should_send_customer_alert(site_name, result):
     return False, signature
 
 
+def should_attempt_recovery(site_name, result, cooldown_hours):
+    state = _load_state()
+    channel_state = _get_site_channel_state(state, site_name, "recovery")
+    signature = build_alert_signature(result)
+
+    if not channel_state:
+        return True, signature
+
+    if channel_state.get("signature") != signature:
+        return True, signature
+
+    last_attempt_at_raw = channel_state.get("last_attempt_at")
+    if not last_attempt_at_raw:
+        return True, signature
+
+    last_attempt_at = datetime.fromisoformat(last_attempt_at_raw)
+    cooldown_until = last_attempt_at + timedelta(hours=cooldown_hours)
+
+    return datetime.now() >= cooldown_until, signature
+
+
 def record_alert_sent(site_name, channel, signature):
     state = _load_state()
     site_state = state.setdefault(site_name, {})
     site_state[channel] = {
         "signature": signature,
         "last_sent_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    _save_state(state)
+
+
+def record_recovery_attempt(site_name, signature, summary):
+    state = _load_state()
+    site_state = state.setdefault(site_name, {})
+    site_state["recovery"] = {
+        "signature": signature,
+        "last_attempt_at": datetime.now().isoformat(timespec="seconds"),
+        "summary": summary,
     }
     _save_state(state)
 
