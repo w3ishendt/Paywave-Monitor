@@ -158,39 +158,11 @@ def evaluate_paywave_health(as_of_date=None):
 
     gap_days = (as_of_date - latest_settlement_date).days
 
-    if expected_rows < minimum_expected_rows:
+    if expected_rows < minimum_expected_rows and latest_settlement_date < expected_settlement_date:
         return MonitorResult(
             status="alert",
             should_alert=True,
             reason="expected_report_empty_or_missing",
-            expected_settlement_date=expected_settlement_date,
-            latest_settlement_date=latest_settlement_date,
-            total_rows=total_rows,
-            expected_rows=expected_rows,
-            gap_days=gap_days,
-            missing_daily_dates=missing_daily_dates,
-            missing_monthly_dates=missing_monthly_dates,
-        )
-
-    if missing_daily_dates:
-        return MonitorResult(
-            status="alert",
-            should_alert=True,
-            reason="missing_dates_within_recent_daily_window",
-            expected_settlement_date=expected_settlement_date,
-            latest_settlement_date=latest_settlement_date,
-            total_rows=total_rows,
-            expected_rows=expected_rows,
-            gap_days=gap_days,
-            missing_daily_dates=missing_daily_dates,
-            missing_monthly_dates=missing_monthly_dates,
-        )
-
-    if missing_monthly_dates:
-        return MonitorResult(
-            status="alert",
-            should_alert=True,
-            reason="missing_dates_within_monthly_window",
             expected_settlement_date=expected_settlement_date,
             latest_settlement_date=latest_settlement_date,
             total_rows=total_rows,
